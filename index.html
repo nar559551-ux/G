@@ -1,0 +1,174 @@
+<!DOCTYPE html><html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>এক-ক্লিক ক্রেডেন셜 লিস্ট</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans Bengali',arial;margin:20px;background:#f7fafc;color:#111}
+    .card{max-width:720px;margin:20px auto;background:#fff;padding:18px;border-radius:10px;box-shadow:0 6px 18px rgba(16,24,40,0.06)}
+    h1{font-size:20px;margin:0 0 8px}
+    p{margin:0 0 12px;color:#374151}
+    a.button, button.action{display:inline-block;background:#111;color:#fff;padding:10px 14px;border-radius:8px;text-decoration:none;border:none;cursor:pointer}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{padding:8px 10px;border-bottom:1px solid #e6eaf0;text-align:left;font-family:monospace}
+    th{background:#f1f5f9}
+    .small{font-size:13px;color:#6b7280}
+    .copy{background:#0ea5a4;padding:6px 8px;border-radius:6px;color:white;border:none;cursor:pointer}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .hidden{display:none}
+    .note{margin-top:10px;font-size:13px;color:#6b7280}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>এক-ক্লিক: সব Username & Password দেখাও</h1>
+    <p class="small">নিচের লিংকে (বা বাটনে) ক্লিক করলে সমস্ত username ও password একসাথে তালিকা আকারে দেখা যাবে — খুব সহজ এক ক্লিকে। প্রতিটি সারির পাশে copy বাটন আছে।</p><!-- Link or button the user asked for -->
+<div class="controls">
+  <a class="button" id="showLink" href="#" onclick="showAll();return false;">Show Credentials — 1 Click</a>
+  <button class="action" onclick="downloadCSV()">Download CSV</button>
+  <button class="action" onclick="copyAll()">Copy All to Clipboard</button>
+</div>
+
+<div id="tableWrap" class="hidden">
+  <table id="credTable" aria-live="polite">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Username</th>
+        <th>Copy</th>
+        <th>Password</th>
+        <th>Copy</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<p class="note">আপনি চাইলে নিচের JavaScript অংশে নিজের username/password লিস্ট দিয়ে বদলে নেবেন — উদাহরণ হিসেবে কিছু আইটেম রাখা আছে।</p>
+
+  </div>  <script>
+    // --- এখানে তোমার নিজের username/password লিস্ট বসাও ---
+    const credentials = [
+      { user: 'user01@example.com', pass: 'P@ssw0rd01' },
+      { user: 'user02', pass: 'secret02' },
+      { user: 'user03', pass: 'abc123' },
+      { user: 'user04', pass: 'pass004' },
+      { user: 'user05', pass: 'mypassword5' }
+    ];
+
+    // একবারে সব দেখানোর ফাংশন (link/এক ক্লিক)
+    function showAll() {
+      const wrap = document.getElementById('tableWrap');
+      const tbody = document.querySelector('#credTable tbody');
+      tbody.innerHTML = ''; // আগে থাকা মুছ
+
+      credentials.forEach((c, i) => {
+        const tr = document.createElement('tr');
+
+        const idx = document.createElement('td'); idx.textContent = i + 1;
+
+        const u = document.createElement('td'); u.textContent = c.user; u.id = `u_${i}`;
+        const uCopyTd = document.createElement('td');
+        const uBtn = document.createElement('button');
+        uBtn.className = 'copy'; uBtn.textContent = 'Copy';
+        uBtn.onclick = () => markCopy(`u_${i}`);
+        uCopyTd.appendChild(uBtn);
+
+        const p = document.createElement('td'); p.textContent = c.pass; p.id = `p_${i}`;
+        const pCopyTd = document.createElement('td');
+        const pBtn = document.createElement('button');
+        pBtn.className = 'copy'; pBtn.textContent = 'Copy';
+        pBtn.onclick = () => markCopy(`p_${i}`);
+        pCopyTd.appendChild(pBtn);
+
+        tr.appendChild(idx);
+        tr.appendChild(u); tr.appendChild(uCopyTd);
+        tr.appendChild(p); tr.appendChild(pCopyTd);
+
+        tbody.appendChild(tr);
+      });((c, i) => {
+        const tr = document.createElement('tr');
+        const idx = document.createElement('td'); idx.textContent = i + 1;
+        const u = document.createElement('td'); u.textContent = c.user;
+        const p = document.createElement('td'); p.textContent = c.pass;
+        const a = document.createElement('td');
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy';
+        copyBtn.textContent = 'Copy';
+        copyBtn.onclick = () => copySingle(c);
+
+        a.appendChild(copyBtn);
+        tr.appendChild(idx); tr.appendChild(u); tr.appendChild(p); tr.appendChild(a);
+        tbody.appendChild(tr);
+      });
+
+      wrap.classList.remove('hidden');
+      // Accessibility focus
+      document.getElementById('credTable').focus?.();
+    }
+
+    // একটি ফিল্ড কপি এবং highlight করা
+    async function markCopy(id){
+      const el = document.getElementById(id);
+      const text = el.textContent;
+
+      try{
+        await navigator.clipboard.writeText(text);
+      }catch(e){
+        const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy'); ta.remove();
+      }
+
+      // highlight
+      document.querySelectorAll('td').forEach(t=>t.style.background='');
+      el.style.background = '#d1fae5'; // light green
+
+      setTimeout(()=>{
+        el.style.background = '';
+      },1500);
+    }
+
+    // একটি ক্রেডেনশিয়াল copy করার ফাংশন
+    async function copySingle(cred){
+      const text = `Username: ${cred.user}
+Password: ${cred.pass}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('Copied: ' + cred.user);
+      } catch(e){
+        // fallback
+        const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy'); ta.remove();
+        alert('Copied (fallback): ' + cred.user);
+      }
+    }
+
+    // সবগুলো একসাথে copy করা
+    async function copyAll(){
+      const all = credentials.map((c,i)=>`${i+1}. ${c.user} | ${c.pass}`).join('
+');
+      try{
+        await navigator.clipboard.writeText(all);
+        alert('All credentials copied to clipboard');
+      }catch(e){
+        const ta = document.createElement('textarea'); ta.value = all; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy'); ta.remove();
+        alert('All credentials copied (fallback)');
+      }
+    }
+
+    // CSV হিসেবে ডাউনলোড
+    function downloadCSV(){
+      const rows = [['No','Username','Password'], ...credentials.map((c,i)=>[i+1,c.user,c.pass])];
+      const csv = rows.map(r => r.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(',')).join('
+');
+      const blob = new Blob([csv], {type: 'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'credentials.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    }
+
+    // (Optional) যদি তুমি চাইলে পেজ লোডে auto-show করতে
+    // window.addEventListener('load', showAll);
+  </script></body>
+</html>
